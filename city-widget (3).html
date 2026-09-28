@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Country / City widget</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&display=swap">
+<style>
+  :root {
+    --cream: #fff6e5;
+    --gold:  #ffc94a;   /* единственный акцент */
+    --ink:   #1a110c;
+    --big: 150px;       /* страна */
+    --small: 40px;      /* город */
+    --tagH: 62px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; width: 100%; height: 100%; background: transparent; overflow: hidden; }
+  body { font-family: Oswald, Impact, "Arial Narrow", sans-serif; }
+
+  #wrap { position: absolute; left: 0; right: 0; display: flex; justify-content: center; }
+  #stack { filter: drop-shadow(0 6px 22px rgba(26,17,12,.55)); width: 1000px; display: flex; flex-direction: column; align-items: center; }
+
+  /* окно с запасом под объёмную тень, чтобы она не обрезалась */
+  .mask { position: relative; width: calc(100% + 48px); margin: -24px; padding: 24px; overflow: hidden; }
+  #bigMask { height: calc(var(--big) * 1.1 + 48px); }
+
+  #big {
+    position: absolute; left: 24px; right: 24px; top: 24px;
+    text-align: center; white-space: nowrap;
+    font-size: var(--big); font-weight: 700; line-height: 1.1; text-transform: uppercase; letter-spacing: .01em;
+    color: var(--cream);
+    text-shadow:
+      -2px -2px 0 var(--ink), 2px -2px 0 var(--ink), -2px 2px 0 var(--ink), 0px -2px 0 var(--ink), -2px 0px 0 var(--ink), 0px 2px 0 var(--ink), 2px 0px 0 var(--ink),
+      1px 1px 0 var(--ink), 2px 2px 0 var(--ink), 3px 3px 0 var(--ink), 4px 4px 0 var(--ink), 5px 5px 0 var(--ink), 6px 6px 0 var(--ink), 7px 7px 0 var(--ink), 8px 8px 0 var(--ink);
+    transition: transform .8s cubic-bezier(.6,0,.2,1), opacity .8s ease;
+  }
+
+  #tagWrap { margin-top: 12px; }
+  #tag {
+    position: relative; overflow: hidden; height: var(--tagH); width: 200px;
+    background: var(--gold); color: var(--ink); border-radius: 6px;
+    box-shadow: 5px 5px 0 var(--ink);
+    transform: rotate(-2deg);
+    transition: width .8s cubic-bezier(.6,0,.2,1);
+  }
+  #small {
+    position: absolute; left: 0; right: 0; top: 0; text-align: center; white-space: nowrap;
+    font-size: var(--small); font-weight: 600; line-height: var(--tagH); letter-spacing: .02em;
+    transition: transform .8s cubic-bezier(.6,0,.2,1), opacity .8s ease;
+  }
+
+  #big.exit { transform: translateY(140%); opacity: .3; }
+  #big.enter-start { transform: translateY(-140%); opacity: 0; }
+  #big.settled, #small.settled { transform: translateY(0); opacity: 1; }
+  #small.exit { transform: translateY(-110%); opacity: .3; }
+  #small.enter-start { transform: translateY(110%); opacity: 0; }
+
+  #measure { position: absolute; visibility: hidden; white-space: nowrap; left: -9999px; top: 0; }
+</style>
+</head>
+<body>
+
+<div id="wrap">
+  <div id="stack">
+    <div class="mask" id="bigMask"><div id="big"></div></div>
+    <div id="tagWrap"><div id="tag"><div id="small"></div></div></div>
+  </div>
+</div>
+<span id="measure"></span>
+
+<script>
+/* ======================================================
+   НАСТРОЙКА ЧЕРЕЗ ССЫЛКУ (без правки файла).
+   ...city-widget.html?places=Pakse:Laos|Vientiane:Laos&interval=8000&pause=1200&top=180
+
+   places   — "Город:Страна" через |
+   interval — время показа, мс (по умолчанию 8000)
+   pause    — пауза между уходом и появлением, мс (по умолчанию 1200)
+   top      — отступ сверху в пикселях (по умолчанию 180)
+
+   Крупной строкой показывается СТРАНА, на жёлтой плашке — город.
+====================================================== */
+const defaultData = [{ city: "Pakse", country: "Laos" }];
+const defaultIntervalMs = 8000;
+const defaultPauseMs = 1200;
+const MAX_TEXT_WIDTH = 940;   // шире этого страна автоматически уменьшается
+const TAG_PAD = 56;           // отступы плашки города слева и справа, суммарно
+const TAG_MIN = 170;
+
+function parseParams() {
+  const params = new URLSearchParams(window.location.search);
+  const placesRaw = params.get("places");
+
+  let data = defaultData;
+  if (placesRaw) {
+    const parsed = placesRaw.split("|").map(pair => {
+      const [city, country] = pair.split(":");
+      return { city: (city || "").trim(), country: (country || "").trim() };
+    }).filter(p => p.city);
+    if (parsed.length > 0) data = parsed;
+  }
+
+  const intervalParsed = parseInt(params.get("interval"), 10);
+  const intervalMs = intervalParsed > 500 ? intervalParsed : defaultIntervalMs;
+  const pauseParsed = parseInt(params.get("pause"), 10);
+  const pauseMs = !isNaN(pauseParsed) && pauseParsed >= 0 ? pauseParsed : defaultPauseMs;
+  const topParsed = parseInt(params.get("top"), 10);
+  const topPx = !isNaN(topParsed) ? topParsed : 180;
+
+  return { data, intervalMs, pauseMs, topPx };
+}
+
+const { data, intervalMs, pauseMs, topPx } = parseParams();
+document.getElementById("wrap").style.top = topPx + "px";
+
+const bigEl = document.getElementById("big");
+const smallEl = document.getElementById("small");
+const tagEl = document.getElementById("tag");
+const stackEl = document.getElementById("stack");
+const measureEl = document.getElementById("measure");
+let i = 0;
+
+function textWidth(text, el) {
+  const cs = getComputedStyle(el);
+  measureEl.style.font = cs.font;
+  measureEl.style.letterSpacing = cs.letterSpacing;
+  measureEl.style.textTransform = cs.textTransform;
+  measureEl.textContent = text;
+  return measureEl.getBoundingClientRect().width;
+}
+
+function render(index) {
+  const place = data[index];
+  bigEl.textContent = place.country;
+  smallEl.textContent = place.city;
+
+  // длинная страна: уменьшаем шрифт, чтобы поместилась в кадр
+  bigEl.style.fontSize = "";
+  const baseSize = parseFloat(getComputedStyle(bigEl).fontSize);
+  const bigW = textWidth(place.country, bigEl);
+  bigEl.style.fontSize = (baseSize * Math.min(1, MAX_TEXT_WIDTH / bigW)) + "px";
+
+  // плашка города подгоняется под длину названия
+  const smallW = textWidth(place.city, smallEl);
+  tagEl.style.width = Math.max(TAG_MIN, Math.ceil(smallW) + TAG_PAD) + "px";
+}
+
+function setAll(fn) { fn(bigEl); fn(smallEl); }
+
+function showNext() {
+  setAll(el => { el.classList.remove("settled"); el.classList.add("exit"); });
+
+  setTimeout(() => {
+    i = (i + 1) % data.length;
+    render(i);
+
+    setAll(el => { el.classList.remove("exit"); el.classList.add("enter-start"); });
+    void bigEl.offsetWidth;
+    setAll(el => { el.classList.remove("enter-start"); el.classList.add("settled"); });
+  }, pauseMs);
+}
+
+// показываем сразу, не дожидаясь шрифта; после загрузки шрифта пересчитываем размеры
+render(i);
+setAll(el => el.classList.add("settled"));
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => render(i));
+
+// ждём шрифт (иначе плашка измерится по запасному); не дольше 2.5 сек
+const fontsReady = document.fonts && document.fonts.load
+  ? Promise.all([document.fonts.load("700 100px Oswald"), document.fonts.load("600 40px Oswald")])
+  : Promise.resolve();
+Promise.race([fontsReady, new Promise(r => setTimeout(r, 1500))]).then(() => { render(i); }, () => {});
+setInterval(showNext, intervalMs);
+</script>
+
+</body>
+</html>
