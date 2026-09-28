@@ -2,177 +2,865 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Country / City widget</title>
+
+<title>Country / City Widget</title>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&display=swap">
+<link
+  rel="stylesheet"
+  media="print"
+  onload="this.media='all'"
+  href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&display=swap"
+>
+
 <style>
   :root {
     --cream: #fff6e5;
-    --gold:  #ffc94a;   /* единственный акцент */
+    --gold:  #ffc94a;
     --ink:   #1a110c;
-    --big: 150px;       /* страна */
-    --small: 40px;      /* город */
-    --tagH: 62px;
+
+    --country-size: 92px;
+    --city-size: 42px;
+
+    --city-height: 58px;
+    --gap: 18px;
   }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; width: 100%; height: 100%; background: transparent; overflow: hidden; }
-  body { font-family: Oswald, Impact, "Arial Narrow", sans-serif; }
 
-  #wrap { position: absolute; left: 0; right: 0; display: flex; justify-content: center; }
-  #stack { filter: drop-shadow(0 6px 22px rgba(26,17,12,.55)); width: 1000px; display: flex; flex-direction: column; align-items: center; }
+  * {
+    box-sizing: border-box;
+  }
 
-  /* окно с запасом под объёмную тень, чтобы она не обрезалась */
-  .mask { position: relative; width: calc(100% + 48px); margin: -24px; padding: 24px; overflow: hidden; }
-  #bigMask { height: calc(var(--big) * 1.1 + 48px); }
+  html,
+  body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    overflow: hidden;
+  }
 
-  #big {
-    position: absolute; left: 24px; right: 24px; top: 24px;
-    text-align: center; white-space: nowrap;
-    font-size: var(--big); font-weight: 700; line-height: 1.1; text-transform: uppercase; letter-spacing: .01em;
+  body {
+    font-family: Oswald, Impact, "Arial Narrow", sans-serif;
+  }
+
+  /* =====================================================
+     POSITION
+  ===================================================== */
+
+  #wrap {
+    position: absolute;
+    left: 0;
+    right: 0;
+
+    display: flex;
+    justify-content: center;
+  }
+
+  /*
+    Большая рабочая область нужна для объёмной тени,
+    чтобы она никогда не обрезалась.
+  */
+  #stage {
+    position: relative;
+
+    display: flex;
+    align-items: center;
+
+    width: max-content;
+    max-width: calc(100vw - 80px);
+
+    padding: 30px 40px;
+
+    filter:
+      drop-shadow(
+        0 7px 20px rgba(26,17,12,.48)
+      );
+  }
+
+
+  /* =====================================================
+     COUNTRY
+  ===================================================== */
+
+  #countryWrap {
+    position: relative;
+
+    z-index: 3;
+
+    flex-shrink: 0;
+
+    display: flex;
+    align-items: center;
+
+    height: 110px;
+
+    overflow: visible;
+  }
+
+  #country {
+    position: relative;
+
+    white-space: nowrap;
+
+    font-size: var(--country-size);
+    font-weight: 700;
+
+    line-height: .95;
+
+    text-transform: uppercase;
+    letter-spacing: .01em;
+
     color: var(--cream);
+
+    /*
+      Толстая мультяшная обводка
+    */
     text-shadow:
-      -2px -2px 0 var(--ink), 2px -2px 0 var(--ink), -2px 2px 0 var(--ink), 0px -2px 0 var(--ink), -2px 0px 0 var(--ink), 0px 2px 0 var(--ink), 2px 0px 0 var(--ink),
-      1px 1px 0 var(--ink), 2px 2px 0 var(--ink), 3px 3px 0 var(--ink), 4px 4px 0 var(--ink), 5px 5px 0 var(--ink), 6px 6px 0 var(--ink), 7px 7px 0 var(--ink), 8px 8px 0 var(--ink);
-    transition: transform .8s cubic-bezier(.6,0,.2,1), opacity .8s ease;
+      -2px -2px 0 var(--ink),
+       2px -2px 0 var(--ink),
+      -2px  2px 0 var(--ink),
+       2px  2px 0 var(--ink),
+
+       0 -3px 0 var(--ink),
+      -3px  0   0 var(--ink),
+       3px  0   0 var(--ink),
+       0  3px 0 var(--ink),
+
+       2px  2px 0 var(--ink),
+       4px  4px 0 var(--ink),
+       6px  6px 0 var(--ink),
+       8px  8px 0 var(--ink);
+
+    transition:
+      transform .7s cubic-bezier(.65,0,.2,1),
+      opacity .5s ease;
   }
 
-  #tagWrap { margin-top: 12px; }
-  #tag {
-    position: relative; overflow: hidden; height: var(--tagH); width: 200px;
-    background: var(--gold); color: var(--ink); border-radius: 6px;
-    box-shadow: 5px 5px 0 var(--ink);
-    transform: rotate(-2deg);
-    transition: width .8s cubic-bezier(.6,0,.2,1);
-  }
-  #small {
-    position: absolute; left: 0; right: 0; top: 0; text-align: center; white-space: nowrap;
-    font-size: var(--small); font-weight: 600; line-height: var(--tagH); letter-spacing: .02em;
-    transition: transform .8s cubic-bezier(.6,0,.2,1), opacity .8s ease;
+
+  /* =====================================================
+     CITY MASK
+  ===================================================== */
+
+  /*
+    Город находится "за" страной.
+
+    Это главное:
+    визуально создаётся ощущение,
+    что PAKSE выезжает из-за LAOS.
+  */
+
+  #cityMask {
+    position: relative;
+
+    z-index: 1;
+
+    flex-shrink: 0;
+
+    height: var(--city-height);
+
+    margin-left: -5px;
+
+    overflow: hidden;
+
+    display: flex;
+    align-items: center;
+
+    border-radius: 7px;
+
+    background: var(--gold);
+
+    box-shadow:
+      6px 6px 0 var(--ink);
+
+    transform: rotate(-1.5deg);
+
+    /*
+      Начальная ширина.
+      JS потом подгонит её под город.
+    */
+    width: 190px;
+
+    transition:
+      width .65s cubic-bezier(.65,0,.2,1);
   }
 
-  #big.exit { transform: translateY(140%); opacity: .3; }
-  #big.enter-start { transform: translateY(-140%); opacity: 0; }
-  #big.settled, #small.settled { transform: translateY(0); opacity: 1; }
-  #small.exit { transform: translateY(-110%); opacity: .3; }
-  #small.enter-start { transform: translateY(110%); opacity: 0; }
 
-  #measure { position: absolute; visibility: hidden; white-space: nowrap; left: -9999px; top: 0; }
+  /* =====================================================
+     CITY
+  ===================================================== */
+
+  #city {
+    position: absolute;
+
+    left: 0;
+    top: 0;
+
+    width: 100%;
+    height: 100%;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0 22px;
+
+    white-space: nowrap;
+
+    font-size: var(--city-size);
+    font-weight: 600;
+
+    line-height: 1;
+
+    letter-spacing: .02em;
+
+    color: var(--ink);
+
+    transition:
+      transform .7s cubic-bezier(.65,0,.2,1),
+      opacity .45s ease;
+  }
+
+
+  /* =====================================================
+     ANIMATION
+  ===================================================== */
+
+  /*
+    Старый город уезжает вправо.
+  */
+
+  #city.exit {
+    transform: translateX(-115%);
+    opacity: 0;
+  }
+
+  /*
+    Новый город изначально находится справа.
+  */
+
+  #city.enter-start {
+    transform: translateX(115%);
+    opacity: 0;
+  }
+
+  /*
+    Потом выезжает на своё место.
+  */
+
+  #city.settled {
+    transform: translateX(0);
+    opacity: 1;
+  }
+
+
+  /* =====================================================
+     COUNTRY CHANGE
+  ===================================================== */
+
+  #country.exit {
+    transform: translateY(-25px);
+    opacity: 0;
+  }
+
+  #country.enter-start {
+    transform: translateY(25px);
+    opacity: 0;
+  }
+
+  #country.settled {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+
+  /* =====================================================
+     HIDDEN MEASURE
+  ===================================================== */
+
+  #measure {
+    position: absolute;
+
+    visibility: hidden;
+
+    white-space: nowrap;
+
+    left: -9999px;
+    top: 0;
+  }
+
+
+  /* =====================================================
+     MOBILE / SMALL SCREEN
+  ===================================================== */
+
+  @media (max-width: 700px) {
+
+    :root {
+      --country-size: 68px;
+      --city-size: 32px;
+      --city-height: 46px;
+    }
+
+    #stage {
+      max-width: calc(100vw - 30px);
+      padding: 22px 20px;
+    }
+
+    #countryWrap {
+      height: 82px;
+    }
+
+    #city {
+      padding: 0 16px;
+    }
+  }
 </style>
 </head>
+
 <body>
 
 <div id="wrap">
-  <div id="stack">
-    <div class="mask" id="bigMask"><div id="big"></div></div>
-    <div id="tagWrap"><div id="tag"><div id="small"></div></div></div>
+
+  <div id="stage">
+
+    <!-- COUNTRY -->
+    <div id="countryWrap">
+      <div id="country"></div>
+    </div>
+
+    <!-- CITY -->
+    <div id="cityMask">
+      <div id="city"></div>
+    </div>
+
   </div>
+
 </div>
+
 <span id="measure"></span>
 
+
 <script>
+
 /* ======================================================
-   НАСТРОЙКА ЧЕРЕЗ ССЫЛКУ (без правки файла).
-   ...city-widget.html?places=Pakse:Laos|Vientiane:Laos&interval=8000&pause=1200&top=180
+   НАСТРОЙКА ЧЕРЕЗ URL
 
-   places   — "Город:Страна" через |
-   interval — время показа, мс (по умолчанию 8000)
-   pause    — пауза между уходом и появлением, мс (по умолчанию 1200)
-   top      — отступ сверху в пикселях (по умолчанию 180)
+   Пример:
 
-   Крупной строкой показывается СТРАНА, на жёлтой плашке — город.
+   city-widget.html
+   ?places=Pakse:Laos|Vientiane:Laos|Da%20Nang:Vietnam
+   &interval=8000
+   &pause=700
+   &top=180
+
+   places
+   ----------------------------------
+   Город:Страна через |
+
+   interval
+   ----------------------------------
+   Сколько показывать один вариант
+
+   pause
+   ----------------------------------
+   Пауза между старым и новым городом
+
+   top
+   ----------------------------------
+   Отступ сверху
 ====================================================== */
-const defaultData = [{ city: "Pakse", country: "Laos" }];
+
+
+const defaultData = [
+  {
+    city: "Pakse",
+    country: "Laos"
+  }
+];
+
 const defaultIntervalMs = 8000;
-const defaultPauseMs = 1200;
-const MAX_TEXT_WIDTH = 940;   // шире этого страна автоматически уменьшается
-const TAG_PAD = 56;           // отступы плашки города слева и справа, суммарно
-const TAG_MIN = 170;
+const defaultPauseMs = 700;
+
+
+/* ======================================================
+   SIZE
+====================================================== */
+
+const MAX_COUNTRY_WIDTH = 650;
+
+const CITY_PADDING = 44;
+const CITY_MIN_WIDTH = 160;
+
+
+/* ======================================================
+   PARAMS
+====================================================== */
 
 function parseParams() {
-  const params = new URLSearchParams(window.location.search);
-  const placesRaw = params.get("places");
+
+  const params =
+    new URLSearchParams(window.location.search);
+
+  const placesRaw =
+    params.get("places");
+
 
   let data = defaultData;
+
+
   if (placesRaw) {
-    const parsed = placesRaw.split("|").map(pair => {
-      const [city, country] = pair.split(":");
-      return { city: (city || "").trim(), country: (country || "").trim() };
-    }).filter(p => p.city);
-    if (parsed.length > 0) data = parsed;
+
+    const parsed =
+      placesRaw
+        .split("|")
+        .map(pair => {
+
+          const [city, country] =
+            pair.split(":");
+
+          return {
+
+            city:
+              (city || "").trim(),
+
+            country:
+              (country || "").trim()
+
+          };
+
+        })
+        .filter(p => p.city);
+
+
+    if (parsed.length > 0) {
+
+      data = parsed;
+
+    }
+
   }
 
-  const intervalParsed = parseInt(params.get("interval"), 10);
-  const intervalMs = intervalParsed > 500 ? intervalParsed : defaultIntervalMs;
-  const pauseParsed = parseInt(params.get("pause"), 10);
-  const pauseMs = !isNaN(pauseParsed) && pauseParsed >= 0 ? pauseParsed : defaultPauseMs;
-  const topParsed = parseInt(params.get("top"), 10);
-  const topPx = !isNaN(topParsed) ? topParsed : 180;
 
-  return { data, intervalMs, pauseMs, topPx };
+  const intervalParsed =
+    parseInt(
+      params.get("interval"),
+      10
+    );
+
+
+  const intervalMs =
+    intervalParsed > 500
+      ? intervalParsed
+      : defaultIntervalMs;
+
+
+  const pauseParsed =
+    parseInt(
+      params.get("pause"),
+      10
+    );
+
+
+  const pauseMs =
+    !isNaN(pauseParsed) &&
+    pauseParsed >= 0
+      ? pauseParsed
+      : defaultPauseMs;
+
+
+  const topParsed =
+    parseInt(
+      params.get("top"),
+      10
+    );
+
+
+  const topPx =
+    !isNaN(topParsed)
+      ? topParsed
+      : 180;
+
+
+  return {
+    data,
+    intervalMs,
+    pauseMs,
+    topPx
+  };
+
 }
 
-const { data, intervalMs, pauseMs, topPx } = parseParams();
-document.getElementById("wrap").style.top = topPx + "px";
 
-const bigEl = document.getElementById("big");
-const smallEl = document.getElementById("small");
-const tagEl = document.getElementById("tag");
-const stackEl = document.getElementById("stack");
-const measureEl = document.getElementById("measure");
-let i = 0;
+const {
+  data,
+  intervalMs,
+  pauseMs,
+  topPx
+} = parseParams();
 
-function textWidth(text, el) {
-  const cs = getComputedStyle(el);
-  measureEl.style.font = cs.font;
-  measureEl.style.letterSpacing = cs.letterSpacing;
-  measureEl.style.textTransform = cs.textTransform;
-  measureEl.textContent = text;
-  return measureEl.getBoundingClientRect().width;
+
+/* ======================================================
+   ELEMENTS
+====================================================== */
+
+const wrap =
+  document.getElementById("wrap");
+
+const countryEl =
+  document.getElementById("country");
+
+const cityEl =
+  document.getElementById("city");
+
+const cityMask =
+  document.getElementById("cityMask");
+
+const measureEl =
+  document.getElementById("measure");
+
+
+wrap.style.top =
+  topPx + "px";
+
+
+let index = 0;
+
+
+/* ======================================================
+   TEXT MEASUREMENT
+====================================================== */
+
+function textWidth(text, element) {
+
+  const style =
+    getComputedStyle(element);
+
+
+  measureEl.style.font =
+    style.font;
+
+  measureEl.style.fontSize =
+    style.fontSize;
+
+  measureEl.style.fontWeight =
+    style.fontWeight;
+
+  measureEl.style.letterSpacing =
+    style.letterSpacing;
+
+  measureEl.style.textTransform =
+    style.textTransform;
+
+
+  measureEl.textContent =
+    text;
+
+
+  return measureEl
+    .getBoundingClientRect()
+    .width;
+
 }
 
-function render(index) {
-  const place = data[index];
-  bigEl.textContent = place.country;
-  smallEl.textContent = place.city;
 
-  // длинная страна: уменьшаем шрифт, чтобы поместилась в кадр
-  bigEl.style.fontSize = "";
-  const baseSize = parseFloat(getComputedStyle(bigEl).fontSize);
-  const bigW = textWidth(place.country, bigEl);
-  bigEl.style.fontSize = (baseSize * Math.min(1, MAX_TEXT_WIDTH / bigW)) + "px";
+/* ======================================================
+   COUNTRY SIZE
+====================================================== */
 
-  // плашка города подгоняется под длину названия
-  const smallW = textWidth(place.city, smallEl);
-  tagEl.style.width = Math.max(TAG_MIN, Math.ceil(smallW) + TAG_PAD) + "px";
+function resizeCountry(country) {
+
+  countryEl.style.fontSize = "";
+
+  const baseSize =
+    parseFloat(
+      getComputedStyle(countryEl)
+        .fontSize
+    );
+
+
+  const width =
+    textWidth(
+      country,
+      countryEl
+    );
+
+
+  const scale =
+    Math.min(
+      1,
+      MAX_COUNTRY_WIDTH / width
+    );
+
+
+  countryEl.style.fontSize =
+    (baseSize * scale) + "px";
+
 }
 
-function setAll(fn) { fn(bigEl); fn(smallEl); }
+
+/* ======================================================
+   CITY SIZE
+====================================================== */
+
+function resizeCity(city) {
+
+  const width =
+    textWidth(
+      city,
+      cityEl
+    );
+
+
+  const targetWidth =
+    Math.max(
+      CITY_MIN_WIDTH,
+      Math.ceil(width) + CITY_PADDING
+    );
+
+
+  cityMask.style.width =
+    targetWidth + "px";
+
+}
+
+
+/* ======================================================
+   RENDER
+====================================================== */
+
+function render(i) {
+
+  const place =
+    data[i];
+
+
+  countryEl.textContent =
+    place.country;
+
+
+  cityEl.textContent =
+    place.city;
+
+
+  resizeCountry(
+    place.country
+  );
+
+
+  resizeCity(
+    place.city
+  );
+
+}
+
+
+/* ======================================================
+   INITIAL
+====================================================== */
+
+render(index);
+
+
+countryEl.classList.add(
+  "settled"
+);
+
+cityEl.classList.add(
+  "settled"
+);
+
+
+/* ======================================================
+   NEXT
+====================================================== */
 
 function showNext() {
-  setAll(el => { el.classList.remove("settled"); el.classList.add("exit"); });
+
+  /*
+    Старый город уезжает вправо.
+  */
+
+  cityEl.classList.remove(
+    "settled",
+    "enter-start"
+  );
+
+  cityEl.classList.add(
+    "exit"
+  );
+
+
+  /*
+    Через pause появляется новый.
+  */
 
   setTimeout(() => {
-    i = (i + 1) % data.length;
-    render(i);
 
-    setAll(el => { el.classList.remove("exit"); el.classList.add("enter-start"); });
-    void bigEl.offsetWidth;
-    setAll(el => { el.classList.remove("enter-start"); el.classList.add("settled"); });
+    index =
+      (index + 1) %
+      data.length;
+
+
+    const next =
+      data[index];
+
+
+    /*
+      Если страна та же —
+      оставляем LAOS на месте.
+
+      Если страна другая —
+      страна тоже делает
+      небольшую вертикальную смену.
+    */
+
+    const previous =
+      data[
+        (index - 1 + data.length) %
+        data.length
+      ];
+
+
+    const countryChanged =
+      previous.country !== next.country;
+
+
+    render(index);
+
+
+    if (countryChanged) {
+
+      countryEl.classList.remove(
+        "settled",
+        "enter-start"
+      );
+
+      countryEl.classList.add(
+        "exit"
+      );
+
+    }
+
+
+    /*
+      Новый город начинает справа.
+    */
+
+    cityEl.classList.remove(
+      "exit"
+    );
+
+    cityEl.classList.add(
+      "enter-start"
+    );
+
+
+    /*
+      Принудительный reflow,
+      чтобы браузер точно запустил
+      transition.
+    */
+
+    void cityEl.offsetWidth;
+
+
+    cityEl.classList.remove(
+      "enter-start"
+    );
+
+    cityEl.classList.add(
+      "settled"
+    );
+
+
+    /*
+      Если страна изменилась —
+      запускаем её появление.
+    */
+
+    if (countryChanged) {
+
+      void countryEl.offsetWidth;
+
+      countryEl.classList.remove(
+        "exit"
+      );
+
+      countryEl.classList.add(
+        "enter-start"
+      );
+
+      void countryEl.offsetWidth;
+
+      countryEl.classList.remove(
+        "enter-start"
+      );
+
+      countryEl.classList.add(
+        "settled"
+      );
+
+    }
+
+
   }, pauseMs);
+
 }
 
-// показываем сразу, не дожидаясь шрифта; после загрузки шрифта пересчитываем размеры
-render(i);
-setAll(el => el.classList.add("settled"));
-if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => render(i));
 
-// ждём шрифт (иначе плашка измерится по запасному); не дольше 2.5 сек
-const fontsReady = document.fonts && document.fonts.load
-  ? Promise.all([document.fonts.load("700 100px Oswald"), document.fonts.load("600 40px Oswald")])
-  : Promise.resolve();
-Promise.race([fontsReady, new Promise(r => setTimeout(r, 1500))]).then(() => { render(i); }, () => {});
-setInterval(showNext, intervalMs);
+/* ======================================================
+   FONT LOADING
+====================================================== */
+
+if (
+  document.fonts &&
+  document.fonts.ready
+) {
+
+  document.fonts.ready.then(() => {
+
+    render(index);
+
+  });
+
+}
+
+
+if (
+  document.fonts &&
+  document.fonts.load
+) {
+
+  Promise.all([
+
+    document.fonts.load(
+      "700 90px Oswald"
+    ),
+
+    document.fonts.load(
+      "600 42px Oswald"
+    )
+
+  ]).then(() => {
+
+    render(index);
+
+  });
+
+}
+
+
+/* ======================================================
+   LOOP
+====================================================== */
+
+setInterval(
+  showNext,
+  intervalMs
+);
+
 </script>
 
 </body>
 </html>
+
